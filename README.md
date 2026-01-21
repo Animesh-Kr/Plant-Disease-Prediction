@@ -18,7 +18,6 @@ Identify 38 varieties of plant diseases with high-precision Deep Learning.
 3. Run the application:
    ```bash
    streamlit run app/main.py
-
    
 📂 Project Structure
 app/: Contains the Streamlit web application.
