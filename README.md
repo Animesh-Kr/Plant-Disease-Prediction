@@ -26,4 +26,8 @@ model_training_notebook/: Contains the original training script and data process
 
 trained_model/: Storage for the serialized Keras model.
 
+<img width="542" height="456" alt="Screenshot 2026-01-23 020337" src="https://github.com/user-attachments/assets/61cf90bb-9350-4da7-adf0-c71cf6fd5d8c" />
+
+
+Achieved high accuracy across 38 classes with low False Positive rate, as shown in the Confusion Matrix.
 Developed by Animesh Kumar
