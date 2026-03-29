@@ -1,8 +1,0 @@
-tensorflow==2.15.0
-streamlit
-pillow
-numpy
-opencv-python-headless
-scikit-learn
-seaborn
-matplotlib
