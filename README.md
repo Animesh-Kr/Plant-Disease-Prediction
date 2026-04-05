@@ -1,9 +1,10 @@
 # 🌿 Plant Disease Prediction — EfficientNetV2S
 
 > Research-grade plant pathology classification pipeline on the PlantVillage benchmark.  
-> 38 disease classes · 54,306 images · ~98% test accuracy · Live demo on HuggingFace.
+> 38 disease classes · 54,306 images · **99.57% test accuracy** · Live demo on HuggingFace.
 
 [![HuggingFace Space](https://img.shields.io/badge/🤗%20HuggingFace-Live%20Demo-yellow)](https://huggingface.co/spaces/animeshakr/plant-disease-detection1)
+[![Model Weights](https://img.shields.io/badge/🤗%20HuggingFace-Model%20Weights-orange)](https://huggingface.co/animeshakr/plant-disease-efficientnetv2s)
 [![Python](https://img.shields.io/badge/Python-3.10-blue)](https://python.org)
 [![TensorFlow](https://img.shields.io/badge/TensorFlow-2.17-orange)](https://tensorflow.org)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
@@ -20,22 +21,36 @@ proper statistical evaluation, and including explainability tools relevant to ag
 - Family-aware train/val/test split using perceptual hashing to prevent near-duplicate leakage
 - Two-stage transfer learning (frozen warmup → selective backbone unfreeze)
 - Held-out test set never seen during training or checkpoint selection
-- McNemar's test to confirm ablation significance (p < 0.01)
+- McNemar's test confirms ablation significance (p = 3.27 × 10⁻¹⁸²)
 - MC Dropout uncertainty quantification for deployment safety
 - Grad-CAM explainability on both correct and failure cases
-- UMAP embedding visualisation + 3D performance surface
+- UMAP 2D + 3D embedding visualisation
+- 3D performance surface + 3D confusion surface
+- Expected Calibration Error (ECE) + reliability diagram
 
 ---
 
 ## 📊 Results
 
-| Model | Test Accuracy | Macro F1 | Top-3 Accuracy |
-|---|---|---|---|
-| Baseline CNN (4-block) | — | — | — |
-| EfficientNetV2S (ours) | ~98% | ~97.5% | ~99.8% |
+| Model | Test Accuracy | Macro F1 | Weighted F1 | Top-3 Accuracy | Mean Confidence |
+|---|---|---|---|---|---|
+| Baseline CNN (4-block, scratch) | 91.23% | 89.32% | 91.28% | 98.74% | 78.54% |
+| **EfficientNetV2S (ours)** | **99.57%** | **99.48%** | **99.57%** | **99.98%** | **90.55%** |
 
-> McNemar's test confirms the improvement is statistically significant (p < 0.01).  
-> Expected Calibration Error (ECE) < 0.05 — well calibrated.
+> **McNemar's test:** p = 3.27 × 10⁻¹⁸² — improvement is statistically significant beyond any reasonable doubt.  
+> **ECE:** 0.0902 — moderately well calibrated.  
+> **MC Dropout:** Flagged uncertain images are ~17 percentage points less accurate than unflagged — uncertainty flag is meaningful.
+
+---
+
+## 🗺️ Research Visualisations
+
+| Visualisation | Type | Link |
+|---|---|---|
+| UMAP 2D embedding | Static PNG | [View in app](https://huggingface.co/spaces/animeshakr/plant-disease-detection1) |
+| UMAP 3D embedding | Interactive HTML | [Open](https://animesh-kr.github.io/Plant-Disease-Prediction/umap_3d.html) |
+| 3D Performance Surface | Interactive HTML | [Open](https://animesh-kr.github.io/Plant-Disease-Prediction/performance_surface_3d.html) |
+| 3D Confusion Surface | Interactive HTML | [Open](https://animesh-kr.github.io/Plant-Disease-Prediction/confusion_3d.html) |
 
 ---
 
@@ -44,7 +59,7 @@ proper statistical evaluation, and including explainability tools relevant to ag
 ```
 Input (384×384×3)
     ↓
-Augmentation (RandomFlip, RandomRotation, RandomZoom, RandomContrast)
+Augmentation (RandomFlip, RandomRotation, RandomZoom, RandomTranslation, RandomContrast)
     ↓
 EfficientNetV2S backbone (ImageNet weights, include_preprocessing=True)
     ↓  ← top 40% unfrozen during fine-tune
@@ -61,6 +76,7 @@ Dense(38, softmax)
 - Loss: CategoricalCrossEntropy + label smoothing 0.1
 - Optimizer: AdamW (weight decay 1e-4)
 - Mixed precision float16, batch size 64
+- Hardware: A100 80 GB GPU, 167 GB RAM (Google Colab Pro+)
 
 ---
 
@@ -89,14 +105,17 @@ Dense(38, softmax)
 
 ```
 Plant-Disease-Prediction/
-├── app.py                          # Streamlit inference app
-├── requirements.txt                # Dependencies
-├── class_indices.json              # Label mapping (0-37)
-└── Plant_Disease_Final_Colab.ipynb # Full training notebook
+├── app.py                              # Streamlit inference app (3 tabs)
+├── requirements.txt                    # Dependencies
+├── class_indices.json                  # Label mapping (0–37)
+├── Plant_Disease_Final_Colab.ipynb     # Full training notebook
+├── umap_3d.html                        # Interactive 3D UMAP (GitHub Pages)
+├── performance_surface_3d.html         # Interactive 3D performance surface
+└── confusion_3d.html                   # Interactive 3D confusion surface
 ```
 
 > **Model weights** are hosted on HuggingFace (too large for GitHub):
-> - `model_float16_quant.tflite` (~45 MB) — for deployment
+> - [`model_float16_quant.tflite`](https://huggingface.co/animeshakr/plant-disease-efficientnetv2s) (~45 MB) — for deployment
 > - `best_model.keras` (~202 MB) — for continued training
 
 ---
@@ -123,11 +142,13 @@ streamlit run app.py
 ## 🔍 Explainability
 
 **Grad-CAM** overlays highlight discriminative leaf regions used for each prediction,
-providing visual evidence of what the model has learned.
+providing visual evidence of what the model has learned — shown for both correct predictions
+and failure cases.
 
 **MC Dropout** (30 stochastic forward passes) produces an uncertainty score per prediction.
 Images flagged with std > 0.15 are marked for manual review — these flagged images are
-~17 percentage points less accurate than unflagged ones, confirming the flag is meaningful.
+~17 percentage points less accurate than unflagged ones, confirming the flag is meaningful
+for real-world deployment safety.
 
 ---
 
@@ -137,8 +158,10 @@ The app is deployed as a Streamlit Space on HuggingFace using TFLite float16 qua
 - ~45 MB model size (vs 202 MB full .keras)
 - Runs on CPU Basic (free tier)
 - Cold start ~30s, subsequent predictions ~200ms
+- 3 tabs: Predict · Research Visualisations · Model Details
 
-**Live demo:** https://huggingface.co/spaces/animeshakr/plant-disease-detection1
+**Live demo:** https://huggingface.co/spaces/animeshakr/plant-disease-detection1  
+**Model weights:** https://huggingface.co/animeshakr/plant-disease-efficientnetv2s
 
 ---
 
